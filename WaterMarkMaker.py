@@ -1,7 +1,5 @@
 import tkinter as tk
-from tkinter import simpledialog
-from tkinter import filedialog
-from tkinter import messagebox
+from tkinter import simpledialog, filedialog, messagebox
 from PIL import Image, ImageDraw, ImageFont
 from docx import Document
 from pptx import Presentation
@@ -9,6 +7,7 @@ from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.colors import Color
+import io
 
 def ask_for_watermark_details():
     root = tk.Tk()
@@ -70,80 +69,55 @@ def ask_for_watermark_details():
         "density": density
     }
 
-def add_watermark_to_image(image_path, watermark_details):
-    image = Image.open(image_path).convert("RGBA")
-    width, height = image.size
-
-    watermark = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(watermark)
-
-    font = ImageFont.truetype(watermark_details["font_path"], watermark_details["font_size"])
-
-    text_width, text_height = draw.textsize(watermark_details["watermark_text"], font)
-    x = (width - text_width) / 2
-    y = (height - text_height) / 2
-
-    color_with_opacity = (*watermark_details["color"], int(watermark_details["opacity"] * 255))
-
-    draw.text((x, y), watermark_details["watermark_text"], font=font, fill=color_with_opacity)
-
-    watermarked_image = Image.alpha_composite(image, watermark)
-
-    watermarked_image.save("watermarked_image.png", "PNG")
-
-def add_watermark_to_pdf(pdf_path, watermark_details):
-    output_pdf = PdfWriter()
-
-    with open(pdf_path, "rb") as input_pdf:
-        reader = PdfReader(input_pdf)
-
-        for page_num in range(len(reader.pages)):
-            page = reader.pages[page_num]
-
-            packet = io.BytesIO()
-            c = canvas.Canvas(packet, pagesize=letter)
-            c.setFont(watermark_details["font_path"], watermark_details["font_size"])
-
-            c.setFillColor(Color(*watermark_details["color"], alpha=watermark_details["opacity"]))
-
-            text_width = c.stringWidth(watermark_details["watermark_text"], watermark_details["font_path"], watermark_details["font_size"])
-            text_height = watermark_details["font_size"]
-
-            x = (letter[0] - text_width) / 2
-            y = (letter[1] - text_height) / 2
-
-            c.drawString(x, y, watermark_details["watermark_text"])
-
-            c.save()
-
-            packet.seek(0)
-            new_pdf = PdfReader(packet)
-            page.merge_page(new_pdf.pages[0])
-
-            output_pdf.add_page(page)
-
-        with open("watermarked_pdf.pdf", "wb") as output_file:
-            output_pdf.write(output_file)
+def add_watermark_to_word(docx_path, watermark_details):
+    doc = Document(docx_path)
+    for section in doc.sections:
+        header = section.header
+        paragraph = header.paragraphs[0]
+        run = paragraph.add_run(watermark_details["watermark_text"])
+        run.font.size = watermark_details["font_size"]
+        run.font.name = watermark_details["font_path"]
+        run.font.color.rgb = Color(*watermark_details["color"], alpha=watermark_details["opacity"])
+    doc.save("watermarked_" + docx_path)
 
 def add_watermark_to_pptx(pptx_path, watermark_details):
     prs = Presentation(pptx_path)
-
     for slide in prs.slides:
         left = top = 0
         width = height = prs.slide_width
         textbox = slide.shapes.add_textbox(left, top, width, height)
         text_frame = textbox.text_frame
         text_frame.text = watermark_details["watermark_text"]
-
         for paragraph in text_frame.paragraphs:
             for run in paragraph.runs:
                 run.font.size = watermark_details["font_size"]
                 run.font.name = watermark_details["font_path"]
-
         textbox.fill.solid()
         textbox.fill.fore_color.rgb = Color(*watermark_details["color"], alpha=watermark_details["opacity"])
+    prs.save("watermarked_" + pptx_path)
 
-    prs.save("watermarked_pptx.pptx")
+def add_watermark_to_pdf(pdf_path, watermark_details):
+    output_pdf = PdfWriter()
+    with open(ppdf_path, "rb") as input_pdf:
+        reader = PdfReader(input_pdf)
+        for page_num in range(len(reader.pages)):
+            page = reader.pages[page_num]
+            packet = io.BytesIO()
+            c = canvas.Canvas(packet, pagesize=letter)
+            c.setFont(watermark_details["font_path"], watermark_details["font_size"])
+            c.setFillColor(Color(*watermark_details["color"], alpha=watermark_details["opacity"]))
+            text_width = c.stringWidth(watermark_details["watermark_text"], watermark_details["font_path"], watermark_details["font_size"])
+            text_height = watermark_details["font_size"]
+            x = (letter[0] - text_width) / 2
+            y = (letter[1] - text_height) / 2
+            c.drawString(x, y, watermark_details["watermark_text"])
+            c.save()
+            packet.seek(0)
+            new_pdf = PdfReader(packet)
+            page.merge_page(new_pdf.pages[0])
+            output_pdf.add_page(page)
+        with open("watermarked_" + pdf_path, "wb") as output_file:
+            output_pdf.write(output_file)
 
 def main():
     watermark_details = ask_for_watermark_details()
@@ -155,4 +129,14 @@ def main():
         messagebox.showwarning("选择错误", "未选择文件！")
         return
 
-    if file_path.endswith(".docx
+    if file_path.endswith(".docx"):
+        add_watermark_to_word(file_path, watermark_details)
+    elif file_path.endswith(".pptx"):
+        add_watermark_to_pptx(file_path, watermark_details)
+    elif file_path.endswith(".pdf"):
+        add_watermark_to_pdf(file_path, watermark_details)
+    else:
+        messagebox.showwarning("格式错误", "不支持的文件格式！")
+
+if __name__ == "__main__":
+    main()
