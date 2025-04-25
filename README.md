@@ -1,11 +1,11 @@
 # WaterMarkMaker
 
-A Python GUI application for adding watermarks to Word (.docx), PowerPoint (.pptx), and PDF files.
+A Python GUI application for adding watermarks to PowerPoint (.pptx), and PDF files.
 
 ## Features
 
 - Add customizable text watermarks to documents
-- Supports multiple file formats: DOCX, PPTX, PDF
+- Supports multiple file formats: PPTX, PDF
 - Adjustable watermark properties:
   - Text content
   - Font style and size
@@ -20,7 +20,6 @@ A Python GUI application for adding watermarks to Word (.docx), PowerPoint (.ppt
 - Required packages:
   - tkinter (usually included with Python)
   - Pillow (`pip install pillow`)
-  - python-docx (`pip install python-docx`)
   - python-pptx (`pip install python-pptx`)
   - PyPDF2 (`pip install pypdf2`)
   - reportlab (`pip install reportlab`)
@@ -57,21 +56,12 @@ A Python GUI application for adding watermarks to Word (.docx), PowerPoint (.ppt
 
 ## Supported File Formats
 
-- **Word (.docx)**: Watermark appears in document header
 - **PowerPoint (.pptx)**: Watermark appears on all slides
 - **PDF**: Watermark appears diagonally across each page
 
 ## Example Usage
 
-1. Adding a "DRAFT" watermark to a Word document:
-   - Text: "DRAFT"
-   - Font: Arial
-   - Size: 48
-   - Color: 200,200,200 (light gray)
-   - Opacity: 0.3
-   - Density: 3
-
-2. Adding a confidential notice to a PDF:
+1. Adding a confidential notice to a PDF:
    - Text: "CONFIDENTIAL"
    - Font: Times New Roman
    - Size: 36
@@ -88,5 +78,5 @@ A Python GUI application for adding watermarks to Word (.docx), PowerPoint (.ppt
 ## Troubleshooting
 
 - If you get font-related errors, try a different .ttf font file
-- Make sure the output file path has the correct extension (.docx, .pptx, or .pdf)
+- Make sure the output file path has the correct extension (.pptx, or .pdf)
 - For large PDF files, processing may take some time
