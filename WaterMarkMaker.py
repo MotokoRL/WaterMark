@@ -1,240 +1,140 @@
+import fitz  # PyMuPDF
 import tkinter as tk
-from tkinter import filedialog, messagebox
-from PIL import Image, ImageDraw, ImageFont
-from docx import Document
-from docx.shared import RGBColor
-from pptx import Presentation
-from PyPDF2 import PdfReader, PdfWriter
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.colors import Color
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-import io
+from tkinter import filedialog, messagebox, colorchooser
 import os
 
-class WatermarkApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("水印添加程序")
-        
-        # 文件选择
-        tk.Label(root, text="输入文件:").grid(row=0, column=0)
-        self.input_file_entry = tk.Entry(root, width=40)
-        self.input_file_entry.grid(row=0, column=1)
-        tk.Button(root, text="选择文件", command=self.select_input_file).grid(row=0, column=2)
-        
-        # 保存路径
-        tk.Label(root, text="保存路径:").grid(row=1, column=0)
-        self.output_file_entry = tk.Entry(root, width=40)
-        self.output_file_entry.grid(row=1, column=1)
-        tk.Button(root, text="选择路径", command=self.select_output_file).grid(row=1, column=2)
-        
-        # 水印内容
-        tk.Label(root, text="水印内容:").grid(row=2, column=0)
-        self.watermark_text_entry = tk.Entry(root, width=40)
-        self.watermark_text_entry.grid(row=2, column=1)
-        
-        # 字体选择
-        tk.Label(root, text="字体文件:").grid(row=3, column=0)
-        self.font_path_entry = tk.Entry(root, width=40)
-        self.font_path_entry.grid(row=3, column=1)
-        tk.Button(root, text="选择字体", command=self.select_font_file).grid(row=3, column=2)
-        
-        # 字体大小
-        tk.Label(root, text="字体大小:").grid(row=4, column=0)
-        self.font_size_entry = tk.Entry(root, width=40)
-        self.font_size_entry.grid(row=4, column=1)
-        
-        # 字体颜色
-        tk.Label(root, text="字体颜色 (RGB):").grid(row=5, column=0)
-        self.color_entry = tk.Entry(root, width=40)
-        self.color_entry.grid(row=5, column=1)
-        self.color_entry.insert(0, "0,0,0")
-        
-        # 透明度
-        tk.Label(root, text="透明度 (0.0-1.0):").grid(row=6, column=0)
-        self.opacity_entry = tk.Entry(root, width=40)
-        self.opacity_entry.grid(row=6, column=1)
-        self.opacity_entry.insert(0, "0.5")
-        
-        # 密度
-        tk.Label(root, text="密度 (1-10):").grid(row=7, column=0)
-        self.density_entry = tk.Entry(root, width=40)
-        self.density_entry.grid(row=7, column=1)
-        self.density_entry.insert(0, "5")
-        
-        # 操作按钮
-        tk.Button(root, text="添加水印", command=self.process_watermark).grid(row=8, column=1)
-        tk.Button(root, text="退出", command=root.quit).grid(row=8, column=2)
+def get_chinese_font():
+    windir = os.environ.get('WINDIR', 'C:/Windows')
+    fonts = [os.path.join(windir, "Fonts", "msyh.ttc"), os.path.join(windir, "Fonts", "simsun.ttc")]
+    for f in fonts:
+        if os.path.exists(f): return f
+    return None
 
-    def select_input_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("所有文件", "*.*")])
-        if file_path:
-            self.input_file_entry.delete(0, tk.END)
-            self.input_file_entry.insert(0, file_path)
+current_color = (0.7, 0.7, 0.7)
 
-    def select_output_file(self):
-        file_path = filedialog.asksaveasfilename(defaultextension=".*")
-        if file_path:
-            self.output_file_entry.delete(0, tk.END)
-            self.output_file_entry.insert(0, file_path)
+def pick_color():
+    global current_color
+    color = colorchooser.askcolor(title="选择水印颜色")
+    if color[1]:
+        current_color = tuple(c/255 for c in color[0])
+        color_button.config(bg=color[1])
 
-    def select_font_file(self):
-        font_path = filedialog.askopenfilename(filetypes=[("TrueType 字体", "*.ttf")])
-        if font_path:
-            self.font_path_entry.delete(0, tk.END)
-            self.font_path_entry.insert(0, font_path)
+def add_tiled_watermark(input_pdf, output_pdf, text, grid_size, opacity, color_rgb, font_size):
+    try:
+        doc = fitz.open(input_pdf)
+        font_path = get_chinese_font()
+        if not font_path: return False
 
-    def validate_inputs(self):
-        try:
-            # 验证输入文件
-            input_file = self.input_file_entry.get()
-            if not input_file or not os.path.exists(input_file):
-                messagebox.showerror("错误", "请选择有效的输入文件！")
-                return False
+        text_width = len(text) * font_size 
+        safe_grid_x = max(grid_size, text_width * 1.2)
+        safe_grid_y = max(grid_size, font_size * 4)
 
-            # 验证保存路径
-            output_file = self.output_file_entry.get()
-            if not output_file:
-                messagebox.showerror("错误", "请选择保存路径！")
-                return False
-
-            # 验证水印内容
-            watermark_text = self.watermark_text_entry.get()
-            if not watermark_text:
-                messagebox.showerror("错误", "水印内容不能为空！")
-                return False
-
-            # 验证字体文件
-            font_path = self.font_path_entry.get()
-            if not font_path or not os.path.exists(font_path):
-                messagebox.showerror("错误", "请选择有效的字体文件！")
-                return False
-
-            # 验证字体大小
-            font_size = int(self.font_size_entry.get())
-            if font_size <= 0:
-                messagebox.showerror("错误", "字体大小必须大于0！")
-                return False
-
-            # 验证颜色
-            color = tuple(map(int, self.color_entry.get().split(',')))
-            if len(color) != 3 or not all(0 <= c <= 255 for c in color):
-                messagebox.showerror("错误", "颜色格式不正确！")
-                return False
-
-            # 验证透明度
-            opacity = float(self.opacity_entry.get())
-            if not 0.0 <= opacity <= 1.0:
-                messagebox.showerror("错误", "透明度必须在0.0到1.0之间！")
-                return False
-
-            # 验证密度
-            density = int(self.density_entry.get())
-            if not 1 <= density <= 10:
-                messagebox.showerror("错误", "密度必须在1到10之间！")
-                return False
-
-            return True
-        except ValueError as e:
-            messagebox.showerror("输入错误", f"输入格式不正确：{str(e)}")
-            return False
-
-    def process_watermark(self):
-        if not self.validate_inputs():
-            return
-
-        watermark_details = {
-            "watermark_text": self.watermark_text_entry.get(),
-            "font_path": self.font_path_entry.get(),
-            "font_size": int(self.font_size_entry.get()),
-            "color": tuple(map(int, self.color_entry.get().split(','))),
-            "opacity": float(self.opacity_entry.get()),
-            "density": int(self.density_entry.get())
-        }
-
-        input_file = self.input_file_entry.get()
-        output_file = self.output_file_entry.get()
-
-        try:
-            if input_file.endswith(".docx"):
-                self.add_watermark_to_word(input_file, output_file, watermark_details)
-            elif input_file.endswith(".pptx"):
-                self.add_watermark_to_pptx(input_file, output_file, watermark_details)
-            elif input_file.endswith(".pdf"):
-                self.add_watermark_to_pdf(input_file, output_file, watermark_details)
-            else:
-                messagebox.showwarning("格式错误", "不支持的文件格式！")
-        except Exception as e:
-            messagebox.showerror("错误", f"处理文件时出错：{str(e)}")
-
-    def add_watermark_to_word(self, input_path, output_path, watermark_details):
-        doc = Document(input_path)
-        for section in doc.sections:
-            header = section.header
-            paragraph = header.paragraphs[0]
-            run = paragraph.add_run(watermark_details["watermark_text"])
-            run.font.size = watermark_details["font_size"]
-            run.font.name = watermark_details["font_path"]
-            run.font.color.rgb = RGBColor(*watermark_details["color"][:3])
-        doc.save(output_path)
-        messagebox.showinfo("成功", "Word文件水印添加成功！")
-
-    def add_watermark_to_pptx(self, input_path, output_path, watermark_details):
-        prs = Presentation(input_path)
-        for slide in prs.slides:
-            left = top = 0
-            width = height = prs.slide_width
-            textbox = slide.shapes.add_textbox(left, top, width, height)
-            text_frame = textbox.text_frame
-            text_frame.text = watermark_details["watermark_text"]
-            for paragraph in text_frame.paragraphs:
-                for run in paragraph.runs:
-                    run.font.size = watermark_details["font_size"]
-                    run.font.name = watermark_details["font_path"]
-            textbox.fill.solid()
-            textbox.fill.fore_color.rgb = Color(*watermark_details["color"], alpha=watermark_details["opacity"])
-        prs.save(output_path)
-        messagebox.showinfo("成功", "PowerPoint文件水印添加成功！")
-
-    def add_watermark_to_pdf(self, input_path, output_path, watermark_details):
-        output_pdf = PdfWriter()
-        with open(input_path, "rb") as input_pdf:
-            reader = PdfReader(input_pdf)
-            total_pages = len(reader.pages)
-            messagebox.showinfo("进度", f"开始处理PDF文件，共 {total_pages} 页...")
-            for page in reader.pages:
-                packet = io.BytesIO()
-                c = canvas.Canvas(packet, pagesize=letter)
-                font_name = "CustomFont_" + watermark_details["font_path"].replace("/", "_")
-                try:
-                    pdfmetrics.registerFont(TTFont(font_name, watermark_details["font_path"]))
-                except:
-                    font_name = "Helvetica"
-                c.setFont(font_name, watermark_details["font_size"]
-                c.setFillColor(Color(*watermark_details["color"], alpha=watermark_details["opacity"]))
-                
-                # Apply density by repeating the watermark
-                for i in range(watermark_details["density"]):
-                    x = (i + 1) * (letter[0] / (watermark_details["density"] + 1))
-                    y = (i + 1) * (letter[1] / (watermark_details["density"] + 1))
-                    c.drawString(x, y, watermark_details["watermark_text"])
-                
-                c.save()
-                packet.seek(0)
-                new_pdf = PdfReader(packet)
-                page.merge_page(new_pdf.pages[0])
-                output_pdf.add_page(page)
+        for page in doc:
+            w, h = page.rect.width, page.rect.height
+            p1 = fitz.Point(0, 0)
+            m = fitz.Matrix(45)
             
-            with open(output_path, "wb") as output_file:
-                output_pdf.write(output_file)
-            messagebox.showinfo("成功", "PDF文件水印添加成功！")
+            for x in range(-int(w), int(w * 1.5), int(safe_grid_x)):
+                for y in range(-int(h), int(h * 1.5), int(safe_grid_y)):
+                    page.insert_text(
+                        (x, y), text, fontsize=font_size, fontfile=font_path,
+                        fontname="zh", color=color_rgb, fill_opacity=opacity, morph=(p1, m)
+                    )
+        doc.save(output_pdf)
+        doc.close()
+        return True
+    except:
+        return False
 
-def main():
-    root = tk.Tk()
-    app = WatermarkApp(root)
-    root.mainloop()
+# --- 逻辑处理部分 ---
+selected_files = []
 
-if __name__ == "__main__":
-    main()
+def select_files():
+    global selected_files
+    files = filedialog.askopenfilenames(filetypes=[("PDF文件", "*.pdf")])
+    if files:
+        selected_files = list(files)
+        file_label.config(text=f"已选择 {len(selected_files)} 个文件")
+
+def select_output_dir():
+    path = filedialog.askdirectory()
+    if path:
+        output_entry.delete(0, tk.END)
+        output_entry.insert(0, path)
+
+def start_batch_process():
+    watermark_text = text_entry.get()
+    output_dir = output_entry.get()
+    
+    if not selected_files:
+        messagebox.showwarning("提示", "请先选择 PDF 文件")
+        return
+    if not output_dir:
+        messagebox.showwarning("提示", "请选择保存目录")
+        return
+
+    opacity_val = opacity_slider.get() / 100
+    grid_val = int(grid_slider.get())
+    size_val = int(size_slider.get())
+
+    success_count = 0
+    for file_path in selected_files:
+        file_name = os.path.basename(file_path)
+        name, ext = os.path.splitext(file_name)
+        new_name = f"{name}-watermark{ext}"
+        target_path = os.path.join(output_dir, new_name)
+        
+        if add_tiled_watermark(file_path, target_path, watermark_text, grid_val, opacity_val, current_color, size_val):
+            success_count += 1
+
+    messagebox.showinfo("完成", f"批量处理结束！\n成功：{success_count} 个\n保存位置：{output_dir}")
+
+# --- UI 界面 ---
+root = tk.Tk()
+root.title("PDF 批量水印大师 v4.0")
+root.geometry("500x650")
+
+main_frame = tk.Frame(root, padx=30, pady=20)
+main_frame.pack(expand=True, fill="both")
+
+# 1. 选择多个文件
+tk.Label(main_frame, text="1. 选择 PDF 文件 (支持多选):", font=("Arial", 10, "bold")).pack(anchor="w")
+tk.Button(main_frame, text="点击选择多个文件", command=select_files).pack(fill="x", pady=5)
+file_label = tk.Label(main_frame, text="未选择任何文件", fg="blue")
+file_label.pack(anchor="w")
+
+# 2. 选择输出目录
+tk.Label(main_frame, text="2. 选择保存位置:", font=("Arial", 10, "bold")).pack(anchor="w", pady=(10,0))
+output_frame = tk.Frame(main_frame)
+output_frame.pack(fill="x", pady=5)
+output_entry = tk.Entry(output_frame)
+output_entry.pack(side="left", expand=True, fill="x", padx=(0, 5))
+tk.Button(output_frame, text="浏览", command=select_output_dir).pack(side="right")
+
+# 3. 水印设置
+tk.Label(main_frame, text="3. 水印文字:", font=("Arial", 10, "bold")).pack(anchor="w", pady=(10,0))
+text_entry = tk.Entry(main_frame)
+text_entry.insert(0, "内部资料 严禁外传")
+text_entry.pack(fill="x", pady=5)
+
+color_button = tk.Button(main_frame, text="选择颜色", command=pick_color, bg="#B3B3B3")
+color_button.pack(fill="x", pady=5)
+
+tk.Label(main_frame, text="字体大小:").pack(anchor="w")
+size_slider = tk.Scale(main_frame, from_=10, to=100, orient=tk.HORIZONTAL)
+size_slider.set(20)
+size_slider.pack(fill="x")
+
+tk.Label(main_frame, text="不透明度 (%):").pack(anchor="w")
+opacity_slider = tk.Scale(main_frame, from_=5, to=100, orient=tk.HORIZONTAL)
+opacity_slider.set(20)
+opacity_slider.pack(fill="x")
+
+tk.Label(main_frame, text="网格间距:").pack(anchor="w")
+grid_slider = tk.Scale(main_frame, from_=50, to=500, orient=tk.HORIZONTAL)
+grid_slider.set(150)
+grid_slider.pack(fill="x")
+
+tk.Button(main_frame, text="🚀 开启批量处理", command=start_batch_process, bg="#0078D4", fg="white", font=("Arial", 12, "bold"), height=2).pack(fill="x", pady=30)
+
+root.mainloop()
