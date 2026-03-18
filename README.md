@@ -24,6 +24,7 @@ A lightweight Python-based desktop tool designed to add **45-degree tilted tiled
 
 
 🇨🇳 中文说明
+
 一个基于 Python 开发的轻量级桌面工具，专门用于为 PDF 文件添加 45度倾斜平铺 的水印。特别适用于 VC 投资协议、商业合同、内部机密文档的防篡改与版权保护。
 
 ✨ 核心功能
