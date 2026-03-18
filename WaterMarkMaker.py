@@ -91,7 +91,7 @@ def start_batch_process():
 
 # --- UI 界面 ---
 root = tk.Tk()
-root.title("PDF 批量水印大师 v4.0")
+root.title("PDF 批量水印大师 v1.0")
 root.geometry("500x650")
 
 main_frame = tk.Frame(root, padx=30, pady=20)
