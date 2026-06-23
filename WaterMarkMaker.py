@@ -35,7 +35,16 @@ def create_safe_wm_image(text, font_size, color, opacity):
 
     return img_byte_arr.getvalue(), rotated_img.width, rotated_img.height
 
-def create_page_watermark_layer(page_w, page_h, wm_bytes, wm_w, wm_h, step_x, step_y, offset_percent):
+def create_page_watermark_layer(
+    page_w, 
+    page_h, 
+    wm_bytes, 
+    wm_w, 
+    wm_h, 
+    step_x, 
+    step_y, 
+    offset_percent
+):
     wm_img = Image.open(io.BytesIO(wm_bytes)).convert("RGBA")
 
     page_w = int(page_w)
@@ -61,7 +70,6 @@ def create_page_watermark_layer(page_w, page_h, wm_bytes, wm_w, wm_h, step_x, st
             final_y = int(y)
 
             layer.paste(wm_img, (final_x, final_y), wm_img)
-
             x += step_x
 
         y += step_y
@@ -71,8 +79,73 @@ def create_page_watermark_layer(page_w, page_h, wm_bytes, wm_w, wm_h, step_x, st
 
     return img_byte_arr.getvalue()
 
+def add_tiled_watermark(
+    input_pdf,
+    output_pdf,
+    text,
+    horiz_grid,
+    vert_grid,
+    opacity,
+    color_rgb,
+    font_size,
+    offset_percent,
+):
+    doc = fitz.open(input_pdf)
 
-st.title("PDF 水印工具")
+    try:
+        wm_bytes, wm_w, wm_h = create_safe_wm_image(
+            text, font_size, color_rgb, opacity
+        )
+
+        step_x = max(10, horiz_grid)
+        step_y = max(10, vert_grid)
+
+        layer_cache = {}
+
+        for page in doc:
+            w, h = page.rect.width, page.rect.height
+
+            cache_key = (
+                int(w),
+                int(h),
+                step_x,
+                step_y,
+                offset_percent,
+            )
+
+            if cache_key not in layer_cache:
+                layer_bytes = create_page_watermark_layer(
+                    w,
+                    h,
+                    wm_bytes,
+                    wm_w,
+                    wm_h,
+                    step_x,
+                    step_y,
+                    offset_percent,
+                )
+
+                xref = page.insert_image(
+                    page.rect,
+                    stream=layer_bytes,
+                    overlay=True,
+                )
+
+                layer_cache[cache_key] = xref
+
+            else:
+                page.insert_image(
+                    page.rect,
+                    xref=layer_cache[cache_key],
+                    overlay=True,
+                )
+
+        doc.save(output_pdf, garbage=4, deflate=True)
+
+    finally:
+        doc.close()
+
+st.title("PDF Watermark Maker - 水印工具")
 
 uploaded_file = st.file_uploader("上传 PDF 文件", type=["pdf"])
 
@@ -80,8 +153,8 @@ watermark_text = st.text_input("水印内容", "本材料仅供【】阅览")
 
 font_size = st.slider("字体大小Font Size", 10, 100, 24)
 opacity = st.slider("不透明度 Opacity(%)", 5, 100, 20) / 100
-horiz_grid = st.slider("水平间距：越小越密", 30, 800, 220)
-vert_grid = st.slider("垂直间距：越小越密", 30, 800, 260)
+horiz_grid = st.slider("水平间距Horizontal space：越小越密", 30, 800, 220)
+vert_grid = st.slider("垂直间距Vertical space：越小越密", 30, 800, 260)
 offset_percent = st.slider("错位平铺 (%)", 0, 100, 0)
 
 color = st.color_picker("水印颜色Watermark Color", "#B3B3B3")
