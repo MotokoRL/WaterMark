@@ -53,7 +53,7 @@ def add_tiled_watermark(input_pdf, output_pdf, text, horiz_grid, vert_grid, opac
         current_offset_x = step_x * (offset_percent / 100) if offset_percent > 0 else 0
 
         start_x = -wm_w + ((w + wm_w) % step_x) /2
-        start_y = -wm_w + ((h + wm_h) % step_y) /2
+        start_y = -wm_h + ((h + wm_h) % step_y) /2
 
         y = start_y
         row_count = 0
@@ -89,8 +89,6 @@ st.title("PDF 水印工具")
 
 uploaded_file = st.file_uploader("上传 PDF 文件", type=["pdf"])
 
-
-
 watermark_text = st.text_input("水印内容", "本材料仅供【】阅览")
 
 font_size = st.slider("字体大小", 10, 100, 24)
@@ -123,11 +121,15 @@ if uploaded_file and st.button("生成 PDF"):
         )
 
         with open(output_path, "rb") as f:
+            original_name = uploaded_file.name
+            name_without_ext = os.path.splitext(original_name)[0]
+            download_name = f"{name_without_ext}-watermark.pdf"
+
             st.success("处理完成")
             st.download_button(
                 "下载加水印后的 PDF",
                 data=f,
-                file_name="watermark.pdf",
+                file_name=download_name
                 mime="application/pdf",
             )
 
