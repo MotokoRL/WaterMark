@@ -5,13 +5,17 @@ import io
 import tempfile
 import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FONT_PATH = os.path.join(BASE_DIR, "SourceHanSansCN-Normal.ttf")
+
 def create_safe_wm_image(text, font_size, color, opacity):
     test_img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
     draw = ImageDraw.Draw(test_img)
 
     try:
-        font = ImageFont.truetype("DejaVuSans.ttf", font_size)
-    except:
+        font = ImageFont.truetype(FONT_PATH, font_size)
+    except Exception as e:
+        st.error(f"字体加载失败：{e}")
         font = ImageFont.load_default()
 
     bbox = draw.textbbox((0, 0), text, font=font)
