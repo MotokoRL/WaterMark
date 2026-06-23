@@ -74,16 +74,6 @@ def add_tiled_watermark(input_pdf, output_pdf, text, horiz_grid, vert_grid, opac
     doc.save(output_pdf, garbage=4, deflate=True)
     doc.close()
 
-'''
-        for y in range(-int(wm_h), int(h + wm_h), int(step_y)):
-            row_count += 1
-            row_offset_x = current_offset_x if row_count % 2 == 0 else 0
-
-            for x in range(-int(wm_w), int(w + wm_w), int(step_x)):
-                final_x = x + row_offset_x
-                rect = fitz.Rect(final_x, y, final_x + wm_w, y + wm_h)
-                page.insert_image(rect, stream=wm_bytes)
-'''
 st.title("PDF 水印工具")
 
 uploaded_file = st.file_uploader("上传 PDF 文件", type=["pdf"])
