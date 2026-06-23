@@ -35,64 +35,42 @@ def create_safe_wm_image(text, font_size, color, opacity):
 
     return img_byte_arr.getvalue(), rotated_img.width, rotated_img.height
 
+def create_page_watermark_layer(page_w, page_h, wm_bytes, wm_w, wm_h, step_x, step_y, offset_percent):
+    wm_img = Image.open(io.BytesIO(wm_bytes)).convert("RGBA")
 
-def add_tiled_watermark(input_pdf, output_pdf, text, horiz_grid, vert_grid, opacity, color_rgb, font_size, offset_percent):
-    doc = fitz.open(input_pdf)
+    page_w = int(page_w)
+    page_h = int(page_h)
 
-    try:
-        wm_bytes, wm_w, wm_h = create_safe_wm_image(
-            text, font_size, color_rgb, opacity
-        )
+    layer = Image.new("RGBA", (page_w, page_h), (0, 0, 0, 0))
 
-        image_xref = 0
+    current_offset_x = step_x * (offset_percent / 100) if offset_percent > 0 else 0
 
-        for page in doc:
-            w, h = page.rect.width, page.rect.height
+    start_x = -wm_w + ((page_w + wm_w) % step_x) / 2
+    start_y = -wm_h + ((page_h + wm_h) % step_y) / 2
 
-            step_x = max(10, horiz_grid)
-            step_y = max(10, vert_grid)
+    y = start_y
+    row_count = 0
 
-            current_offset_x = step_x * (offset_percent / 100) if offset_percent > 0 else 0
+    while y < page_h + wm_h:
+        row_count += 1
+        row_offset_x = current_offset_x if row_count % 2 == 0 else 0
 
-            start_x = -wm_w + ((w + wm_w) % step_x) /2
-            start_y = -wm_h + ((h + wm_h) % step_y) /2
+        x = start_x
+        while x < page_w + wm_w:
+            final_x = int(x + row_offset_x)
+            final_y = int(y)
 
-            y = start_y
-            row_count = 0
+            layer.paste(wm_img, (final_x, final_y), wm_img)
 
-            while y < h + wm_h:
-                row_count += 1
-                row_offset_x = current_offset_x if row_count % 2 == 0 else 0
+            x += step_x
 
-                x = start_x
-                while x < w + wm_w:
-                    final_x = x + row_offset_x
-                    rect = fitz.Rect(final_x, y, final_x + wm_w, y + wm_h)
+        y += step_y
 
-                    if image_xref == 0:
-                        image_xref = page.insert_image(
-                            rect, 
-                            stream=wm_bytes,
-                            overlay=True,
-                        )
-                    else:
-                        page.insert_image(
-                            rect,
-                            xref=image_xref,
-                            overlay=True,
-                        )
-                
-                    x += step_x
+    img_byte_arr = io.BytesIO()
+    layer.save(img_byte_arr, format="PNG", compress_level=6)
 
-                y += step_y
+    return img_byte_arr.getvalue()
 
-        doc.save(
-            output_pdf, 
-            garbage=4, 
-            deflate=True
-        )
-    finally:
-        doc.close()
 
 st.title("PDF 水印工具")
 
