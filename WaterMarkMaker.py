@@ -95,7 +95,7 @@ if uploaded_file and st.button("生成 Generate PDF"):
     output_path = input_path.replace(".pdf", "-watermark.pdf")
 
     try:
-        add_tiled_watermark(
+        create_page_watermark_layer(
             input_path,
             output_path,
             watermark_text,
