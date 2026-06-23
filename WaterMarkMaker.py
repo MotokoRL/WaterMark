@@ -5,13 +5,17 @@ import io
 import tempfile
 import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FONT_PATH = os.path.join(BASE_DIR, "SourceHanSansCN-Normal.ttf")
+
 def create_safe_wm_image(text, font_size, color, opacity):
     test_img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
     draw = ImageDraw.Draw(test_img)
 
     try:
-        font = ImageFont.truetype("DejaVuSans.ttf", font_size)
-    except:
+        font = ImageFont.truetype(FONT_PATH, font_size)
+    except Exception as e:
+        st.error(f"字体加载失败：{e}")
         font = ImageFont.load_default()
 
     bbox = draw.textbbox((0, 0), text, font=font)
@@ -65,7 +69,9 @@ st.title("PDF 水印工具")
 
 uploaded_file = st.file_uploader("上传 PDF 文件", type=["pdf"])
 
-watermark_text = st.text_input("水印内容", "内部资料 严禁外传")
+
+
+watermark_text = st.text_input("水印内容", "本材料仅供【】阅览")
 
 font_size = st.slider("字体大小", 10, 100, 24)
 opacity = st.slider("不透明度 (%)", 5, 100, 20) / 100
