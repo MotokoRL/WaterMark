@@ -52,6 +52,25 @@ def add_tiled_watermark(input_pdf, output_pdf, text, horiz_grid, vert_grid, opac
         row_count = 0
         current_offset_x = step_x * (offset_percent / 100) if offset_percent > 0 else 0
 
+        start_x = -wm_w + ((w + wm_w) % step_x) /2
+        start_y = -wm_w + ((h + wm_h) % step_y) /2
+
+        y = start_y
+        row_count = 0
+
+        while y < h + wm_h:
+            row_count += 1
+            row_offset_x = current_offset_x if row_count % 2 == 0 else 0
+
+            x = start_x
+            while x < w + wm_w:
+                final_x = x + row_offset_x
+                rect = fitz.Rect(final_x, y, final_x + wm_w, y + wm_h)
+                page.insert_image(rect, stream=wm_bytes)
+                x += step_x
+            y += step_y
+
+'''
         for y in range(-int(wm_h), int(h + wm_h), int(step_y)):
             row_count += 1
             row_offset_x = current_offset_x if row_count % 2 == 0 else 0
@@ -60,6 +79,7 @@ def add_tiled_watermark(input_pdf, output_pdf, text, horiz_grid, vert_grid, opac
                 final_x = x + row_offset_x
                 rect = fitz.Rect(final_x, y, final_x + wm_w, y + wm_h)
                 page.insert_image(rect, stream=wm_bytes)
+'''
 
     doc.save(output_pdf, garbage=4, deflate=True)
     doc.close()
