@@ -75,7 +75,7 @@ def create_page_watermark_layer(
         y += step_y
 
     img_byte_arr = io.BytesIO()
-    layer.save(img_byte_arr, format="PNG", compress_level=6)
+    layer.save(img_byte_arr, format="PNG")
 
     return img_byte_arr.getvalue()
 
@@ -100,46 +100,27 @@ def add_tiled_watermark(
         step_x = max(10, horiz_grid)
         step_y = max(10, vert_grid)
 
-        layer_cache = {}
-
         for page in doc:
             w, h = page.rect.width, page.rect.height
 
-            cache_key = (
-                int(w),
-                int(h),
+            layer_bytes = create_page_watermark_layer(
+                w,
+                h,
+                wm_bytes,
+                wm_w,
+                wm_h,
                 step_x,
                 step_y,
                 offset_percent,
             )
 
-            if cache_key not in layer_cache:
-                layer_bytes = create_page_watermark_layer(
-                    w,
-                    h,
-                    wm_bytes,
-                    wm_w,
-                    wm_h,
-                    step_x,
-                    step_y,
-                    offset_percent,
-                )
-
-                xref = page.insert_image(
-                    page.rect,
-                    stream=layer_bytes,
-                    overlay=True,
-                )
-
-                layer_cache[cache_key] = xref
-
-            else:
-                page.insert_image(
-                    page.rect,
-                    xref=layer_cache[cache_key],
-                    overlay=True,
-                )
-
+            page.insert_image(
+                page.rect,
+                stream=layer_bytes,
+                overlay=True,
+                keep_proportion=False,
+            )
+        
         doc.save(output_pdf, garbage=4, deflate=True)
 
     finally:
