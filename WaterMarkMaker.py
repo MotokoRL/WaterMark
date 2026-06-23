@@ -50,22 +50,27 @@ def create_page_watermark_layer(
     page_w = int(page_w)
     page_h = int(page_h)
 
-    layer = Image.new("RGBA", (page_w, page_h), (0, 0, 0, 0))
+    margin = max(wm_w, wm_h)
+
+    layer_w = page_w + margin * 2
+    layer_h = page_h + margin * 2
+
+    layer = Image.new("RGBA", (layer_w, layer_h), (0, 0, 0, 0))
 
     current_offset_x = step_x * (offset_percent / 100) if offset_percent > 0 else 0
 
-    start_x = -wm_w + ((page_w + wm_w) % step_x) / 2
-    start_y = -wm_h + ((page_h + wm_h) % step_y) / 2
+    start_x = margin - wm_w + ((page_w + wm_w) % step_x) / 2
+    start_y = margin - wm_h + ((page_h + wm_h) % step_y) / 2
 
     y = start_y
     row_count = 0
 
-    while y < page_h + wm_h:
+    while y < layer_h:
         row_count += 1
         row_offset_x = current_offset_x if row_count % 2 == 0 else 0
 
         x = start_x
-        while x < page_w + wm_w:
+        while x < layer_w:
             final_x = int(x + row_offset_x)
             final_y = int(y)
 
@@ -114,8 +119,17 @@ def add_tiled_watermark(
                 offset_percent,
             )
 
+            margin = max(wm_w, wm_h)
+
+            target_rect = fitz.Rect(
+                -margin,
+                -margin,
+                w + margin,
+                h + margin,
+            )
+
             page.insert_image(
-                page.rect,
+                target_rect,
                 stream=layer_bytes,
                 overlay=True,
                 keep_proportion=False,
