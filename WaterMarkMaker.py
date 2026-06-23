@@ -70,7 +70,7 @@ def add_tiled_watermark(input_pdf, output_pdf, text, horiz_grid, vert_grid, opac
                 x += step_x
 
             y += step_y
-            
+
     doc.save(output_pdf, garbage=4, deflate=True)
     doc.close()
 
@@ -128,7 +128,7 @@ if uploaded_file and st.button("生成 PDF"):
             st.download_button(
                 "下载加水印后的 PDF",
                 data=f,
-                file_name=download_name
+                file_name=download_name,
                 mime="application/pdf",
             )
 
