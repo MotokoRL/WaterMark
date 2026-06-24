@@ -147,7 +147,7 @@ uploaded_file = st.file_uploader("上传 PDF 文件", type=["pdf"])
 watermark_text = st.text_input("水印内容", "本材料仅供【】阅览")
 
 font_size = st.slider("字体大小Font Size", 10, 100, 24)
-opacity = st.slider("不透明度 Opacity(%)", 5, 100, 20) / 100
+opacity = st.slider("不透明度 Opacity(%)", 5, 100, 50) / 100
 horiz_grid = st.slider("水平间距Horizontal space：越小越密", 30, 800, 220)
 vert_grid = st.slider("垂直间距Vertical space：越小越密", 30, 800, 260)
 offset_percent = st.slider("错位平铺 (%)", 0, 100, 0)
